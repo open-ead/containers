@@ -7,19 +7,27 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates curl gnupg lsb-release wget software-properties-common \
+        ca-certificates curl \
         git ninja-build libc6-dev libstdc++-14-dev findutils \
     && rm -rf /var/lib/apt/lists/*
 
+# the checkout in CI is owned by a different uid than the container user,
+# which makes git refuse to treat it as a repo, this suppresses that
+RUN git config --system --add safe.directory '*'
+
 # clang/llvm from apt.llvm.org. Using the packaged clang-tidy (instead of the
 # static binaries) means it ships with its resource dir (stddef.h etc.)
-RUN wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh \
-    && chmod +x /tmp/llvm.sh \
-    && /tmp/llvm.sh ${LLVM_VERSION} \
+# The repo is added by hand instead of using llvm.sh, since that installs the
+# whole toolchain (lldb, lld, clangd...) and needs software-properties-common
+RUN . /etc/os-release \
+    && curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/keyrings/llvm.asc \
+    && echo "deb [signed-by=/etc/apt/keyrings/llvm.asc] http://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-${LLVM_VERSION} main" \
+        > /etc/apt/sources.list.d/llvm.list \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
-        clang-tidy-${LLVM_VERSION} clang-format-${LLVM_VERSION} \
+        clang-${LLVM_VERSION} clang-tidy-${LLVM_VERSION} clang-format-${LLVM_VERSION} \
         libc++-${LLVM_VERSION}-dev libc++abi-${LLVM_VERSION}-dev \
-    && rm -rf /var/lib/apt/lists/* /tmp/llvm.sh \
+    && rm -rf /var/lib/apt/lists/* \
     && for t in clang clang++ clang-tidy clang-format; do \
         ln -sf /usr/bin/$t-${LLVM_VERSION} /usr/local/bin/$t; \
     done
