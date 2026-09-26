@@ -9,6 +9,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl \
         git ninja-build libc6-dev libstdc++-14-dev findutils \
+        python3 python-is-python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # the checkout in CI is owned by a different uid than the container user,
