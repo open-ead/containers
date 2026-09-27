@@ -1,8 +1,7 @@
 version: '3'
 
 vars:
-  # IMAGE: ghcr.io/open-ead/ubuntu-builder
-  IMAGE: piston-build-test
+  IMAGE: ghcr.io/open-ead/ubuntu-builder
 
 tasks:
   build:
