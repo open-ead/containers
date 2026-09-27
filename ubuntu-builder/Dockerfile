@@ -1,6 +1,7 @@
 FROM ubuntu:24.04
 
 ARG LLVM_VERSION=22
+ARG NX_AARCH64=22.1.8-1
 ARG CMAKE_VERSION=4.4.2
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -8,7 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl \
-        git ninja-build libc6-dev libstdc++-14-dev findutils \
+        git ninja-build findutils \
         python3 python-is-python3 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -16,22 +17,17 @@ RUN apt-get update \
 # which makes git refuse to treat it as a repo, this suppresses that
 RUN git config --system --add safe.directory '*'
 
-# clang/llvm from apt.llvm.org. Using the packaged clang-tidy (instead of the
-# static binaries) means it ships with its resource dir (stddef.h etc.)
-# The repo is added by hand instead of using llvm.sh, since that installs the
-# whole toolchain (lldb, lld, clangd...) and needs software-properties-common
-RUN . /etc/os-release \
-    && curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/keyrings/llvm.asc \
-    && echo "deb [signed-by=/etc/apt/keyrings/llvm.asc] http://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-${LLVM_VERSION} main" \
-        > /etc/apt/sources.list.d/llvm.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        clang-${LLVM_VERSION} clang-tidy-${LLVM_VERSION} clang-format-${LLVM_VERSION} \
-        libc++-${LLVM_VERSION}-dev libc++abi-${LLVM_VERSION}-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && for t in clang clang++ clang-tidy clang-format; do \
-        ln -sf /usr/bin/$t-${LLVM_VERSION} /usr/local/bin/$t; \
-    done
+# clang-format and clang-tidy binaries
+RUN curl -fsSL "https://github.com/cpp-linter/clang-tools-static-binaries/releases/latest/download/clang-format-22_linux-amd64" -o "/usr/bin/clang-format" \
+    && curl -fsSL "https://github.com/cpp-linter/clang-tools-static-binaries/releases/latest/download/clang-tidy-22_linux-amd64" -o "/usr/bin/clang-tidy" \
+    && chmod +x "/usr/bin/clang-format" "/usr/bin/clang-tidy"
+
+# Mini nx-aarch64 toolchain and musl
+RUN mkdir /opt/nx \
+    && curl -fsSL https://raw.githubusercontent.com/Pistonight/nx-aarch64/main/install.sh | VERSION="${NX_AARCH64}" OUTPUT="/opt/nx" sh \
+    && git clone https://github.com/open-ead/botw-lib-musl /opt/nx/musl
+ENV NX_MUSL=/opt/nx/musl
+ENV NX_CLANG=/opt/nx/nx-aarch64-${NX_AARCH64}
 
 # cmake v4 from kitware release tarball
 RUN curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" \
@@ -40,3 +36,5 @@ RUN curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERS
 
 # go-task
 RUN sh -c "$(curl -fsSL https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+
