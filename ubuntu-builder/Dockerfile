@@ -1,7 +1,7 @@
 FROM ubuntu:24.04
 
 ARG LLVM_VERSION=22
-ARG NX_AARCH64=22.1.8-1
+ARG NX_AARCH64=22.1.8-2
 ARG CMAKE_VERSION=4.4.2
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -18,8 +18,8 @@ RUN apt-get update \
 RUN git config --system --add safe.directory '*'
 
 # clang-format and clang-tidy binaries
-RUN curl -fsSL "https://github.com/cpp-linter/clang-tools-static-binaries/releases/latest/download/clang-format-22_linux-amd64" -o "/usr/bin/clang-format" \
-    && curl -fsSL "https://github.com/cpp-linter/clang-tools-static-binaries/releases/latest/download/clang-tidy-22_linux-amd64" -o "/usr/bin/clang-tidy" \
+RUN curl -fsSL "https://github.com/cpp-linter/clang-tools-static-binaries/releases/latest/download/clang-format-${LLVM_VERSION}_linux-amd64" -o "/usr/bin/clang-format" \
+    && curl -fsSL "https://github.com/cpp-linter/clang-tools-static-binaries/releases/latest/download/clang-tidy-${LLVM_VERSION}_linux-amd64" -o "/usr/bin/clang-tidy" \
     && chmod +x "/usr/bin/clang-format" "/usr/bin/clang-tidy"
 
 # Mini nx-aarch64 toolchain and musl
